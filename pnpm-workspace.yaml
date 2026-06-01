@@ -1,3 +1,6 @@
+overrides:
+  kysely: 0.28.17
+
 allowBuilds:
   better-sqlite3: set this to true or false
   esbuild: true

@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { signIn } from "@/lib/auth-client";
+import { SiGoogle } from "react-icons/si";
 
 type GoogleSignInButtonProps = {
   callbackURL?: string;
@@ -29,12 +30,12 @@ export function GoogleSignInButton({
   return (
     <Button
       type="button"
-      variant="outline"
       size="lg"
       className="w-full"
       disabled={isLoading}
       onClick={handleSignIn}
     >
+      <SiGoogle />
       {isLoading ? "Redirecting…" : "Continue with Google"}
     </Button>
   );

@@ -2,9 +2,10 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
+    color-scheme: light;
     --background: oklch(0.9836 0.0028 31.0494);
     --foreground: oklch(0.2371 0.0112 48.2263);
     --card: oklch(1.0000 0 0);
@@ -59,7 +60,9 @@
     --spacing: 0.25rem;
 }
 
+html.dark,
 .dark {
+    color-scheme: dark;
     --background: oklch(0.1734 0.0112 296.6706);
     --foreground: oklch(0.9346 0.0056 297.7193);
     --card: oklch(0.2045 0.0153 296.4791);

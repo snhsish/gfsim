@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 import {
   boolean,
+  date,
   index,
   pgTable,
   text,
@@ -69,9 +70,32 @@ export const verification = pgTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
-export const userRelations = relations(user, ({ many }) => ({
+export const gfProfile = pgTable(
+  "gf_profile",
+  {
+    id: text("id").primaryKey(),
+    userId: text("userId")
+      .notNull()
+      .unique()
+      .references(() => user.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    dateOfBirth: date("dateOfBirth").notNull(),
+    nativeLanguage: text("nativeLanguage").notNull(),
+    nationality: text("nationality").notNull(),
+    isBisexual: boolean("isBisexual").notNull(),
+    mbti: text("mbti"),
+    zodiacSign: text("zodiacSign").notNull(),
+    maturityTier: text("maturityTier").notNull(),
+    createdAt: timestamp("createdAt").notNull(),
+    updatedAt: timestamp("updatedAt").notNull(),
+  },
+  (table) => [index("gf_profile_userId_idx").on(table.userId)],
+);
+
+export const userRelations = relations(user, ({ one, many }) => ({
   sessions: many(session),
   accounts: many(account),
+  gfProfile: one(gfProfile),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -84,6 +108,13 @@ export const sessionRelations = relations(session, ({ one }) => ({
 export const accountRelations = relations(account, ({ one }) => ({
   user: one(user, {
     fields: [account.userId],
+    references: [user.id],
+  }),
+}));
+
+export const gfProfileRelations = relations(gfProfile, ({ one }) => ({
+  user: one(user, {
+    fields: [gfProfile.userId],
     references: [user.id],
   }),
 }));

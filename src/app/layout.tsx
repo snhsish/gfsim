@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Public_Sans, Fraunces, Space_Mono } from "next/font/google";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import "@/styles/globals.css";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const fontSans = Public_Sans({
   subsets: ["latin"],
@@ -29,11 +31,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${fontSans.variable} ${fontSerif.variable} ${fontMono.variable} antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={`${fontSans.variable} ${fontSerif.variable} ${fontMono.variable} min-h-svh flex flex-col antialiased`}
+      >
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          enableColorScheme
+          disableTransitionOnChange
+        >
+          <TooltipProvider>{children}</TooltipProvider>
+        </ThemeProvider>
+      </body>
     </html>
   );
 }
