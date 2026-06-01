@@ -1,12 +1,30 @@
 import type { Metadata } from "next"
-import { MessageCircleHeartIcon } from "lucide-react"
+import { BadgeCheckIcon, ChevronRightIcon, HeartIcon, InboxIcon, InfoIcon, MessageCircleHeartIcon, SunIcon } from "lucide-react"
 import { ChatShell } from "@/components/chat-shell"
 import { Input } from "@/components/ui/input"
+import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item"
+import Link from "next/link"
+import { PiHandWaving } from "react-icons/pi"
 
 export const metadata: Metadata = {
   title: "Chat · GFSim",
   description: "Chat with your AI girlfriend",
 }
+
+export const chatQuestions = [
+  {
+    icon: PiHandWaving,
+    title: "Hello, how are you?",
+  },
+  {
+    icon: SunIcon,
+    title: "How was your day, babe?",
+  },
+  {
+    icon: InfoIcon,
+    title: "Tell me something about yourself",
+  },
+]
 
 export default function ChatPage() {
   return (
@@ -17,12 +35,35 @@ export default function ChatPage() {
             <MessageCircleHeartIcon className="size-7" />
           </div>
           <h1 className="font-serif text-2xl font-semibold tracking-tight">
-            Your conversation
+            Start your conversation
           </h1>
-          <p className="max-w-sm text-sm text-muted-foreground">
-            One thread, always picking up where you left off — just like texting
-            her.
+          <p className="max-w-md text-sm text-muted-foreground">
+            Maybe send her a {'"hi"'} or {'"how are you?"'} to start the conversation.
           </p>
+
+          <div className="py-5 flex flex-col gap-2 max-w-md w-full">
+            {
+              chatQuestions.map((q, i) => (
+
+                <Item
+                  key={i}
+                  variant="outline" className="w-full bg-primary/5 hover:bg-primary/10! border-primary/20 p-4" asChild>
+                  <Link href="#">
+                    <ItemMedia variant="icon">
+                      <q.icon />
+                    </ItemMedia>
+                    <ItemContent>
+                      <ItemTitle>{q.title}</ItemTitle>
+                    </ItemContent>
+                    <ItemActions>
+                      <ChevronRightIcon className="size-4" />
+                    </ItemActions>
+                  </Link>
+                </Item>
+              ))
+            }
+          </div>
+
         </div>
         <div className="border-t bg-background/80 p-4 backdrop-blur-sm">
           <div className="mx-auto flex max-w-3xl gap-2">
