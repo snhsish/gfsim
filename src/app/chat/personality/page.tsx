@@ -27,7 +27,7 @@ export default async function PersonalityPage() {
 
   return (
     <ChatShell breadcrumb="Personality">
-      <div className="flex flex-1 flex-col items-center overflow-y-auto p-6 md:p-10">
+      <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto p-6 md:p-10">
         <div className="mb-8 w-full max-w-lg space-y-2 text-center">
           <h1 className="font-serif text-2xl font-semibold tracking-tight">
             Personality
