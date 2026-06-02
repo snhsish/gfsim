@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useChat } from "@ai-sdk/react"
+import { DefaultChatTransport } from "ai"
 import { ChevronRightIcon, InfoIcon, MessageCircleHeartIcon, SunIcon } from "lucide-react"
 import { PiHandWaving } from "react-icons/pi"
 import { ChatComposer } from "@/components/chat-composer"
@@ -32,7 +33,7 @@ export function ChatView() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { messages, sendMessage, status } = useChat({
-    api: "/api/chat",
+    transport: new DefaultChatTransport({ api: "/api/chat" }),
   })
   const isLoading = status === "submitted" || status === "streaming"
 
