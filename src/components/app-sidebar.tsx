@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation"
 import {
   BarChart3Icon,
   HeartIcon,
+  KeyIcon,
   LifeBuoyIcon,
   MessageCircleIcon,
   Settings2Icon,
@@ -60,6 +61,11 @@ const accountNav = [
     title: "Usage",
     url: "/account/usage",
     icon: <BarChart3Icon />,
+  },
+  {
+    title: "Configure",
+    url: "/account/config",
+    icon: <KeyIcon />,
   },
 ]
 
