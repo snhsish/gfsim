@@ -24,7 +24,7 @@ import EmojiSelector from "@/components/emoji-selector"
 
 const MAX_TEXTAREA_HEIGHT = 160
 
-function ToolbarIconButton({
+function ToolbarIconButton({            
   className,
   ...props
 }: React.ComponentProps<typeof Button>) {
@@ -62,7 +62,6 @@ export function ChatComposer({
   const message = value ?? internalMessage
   const setMessage = onValueChange ?? setInternalMessage
   const [photos, setPhotos] = useState<File[]>([])
-  const [emojiOpen, setEmojiOpen] = useState(false)
   const [gifOpen, setGifOpen] = useState(false)
 
   const photoPreviewUrls = useMemo(
@@ -189,7 +188,7 @@ export function ChatComposer({
           onChange={(e) => setMessage(e.target.value)}
           onInput={adjustTextareaHeight}
           onKeyDown={handleKeyDown}
-          placeholder="Write a message..."
+          placeholder="Message..."
           rows={2}
           wrap="soft"
           className="block w-full min-h-12 resize-none overflow-hidden border-0 bg-transparent p-0 text-[0.9375rem] leading-6 whitespace-pre-wrap outline-none placeholder:text-muted-foreground focus-visible:ring-0"
@@ -242,17 +241,14 @@ export function ChatComposer({
               </PopoverContent>
             </Popover>
 
-            <ToolbarIconButton
+            <Button
+              size="icon-lg"
               aria-label="Send message"
               disabled={!canSend}
               onClick={handleSend}
-              className={cn(
-                canSend &&
-                "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
-              )}
             >
               <SendHorizontalIcon className="size-5 stroke-[1.75]" />
-            </ToolbarIconButton>
+            </Button>
           </div>
         </div>
       </div>

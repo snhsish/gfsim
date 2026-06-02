@@ -29,9 +29,9 @@ export default function EmojiSelector({
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="size-9 rounded-full text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
+                    className="size-5 rounded-full text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
                 >
-                    <SmileIcon className="size-5 stroke-[1.75]" />
+                    <SmileIcon className="size-5" />
                     <span className="sr-only">Open emoji picker</span>
                 </Button>
             </PopoverTrigger>
