@@ -38,7 +38,9 @@ export async function POST(req: Request) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const gfProfile = await getGfProfileByUserId(session.user.id);
+
+  const gfProfile
+    = await getGfProfileByUserId(session.user.id);
   if (!gfProfile) {
     return new Response("Complete onboarding before chatting.", {
       status: 403,
@@ -97,6 +99,7 @@ export async function POST(req: Request) {
     model: getChatModel(),
     system,
     messages: await convertToModelMessages(messages),
+    maxOutputTokens: 220,
   });
 
   return result.toUIMessageStreamResponse({

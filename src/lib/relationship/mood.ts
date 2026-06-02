@@ -6,9 +6,9 @@ import type {
 
 const MOOD_GUIDANCE: Record<MoodState, string> = {
   normal:
-    "Balanced warmth. Mix short and longer messages. Assume good intent when unclear. Some vulnerability, clear boundaries.",
+    "Balanced warmth. Short texts by default. Assume good intent when unclear. Some vulnerability, clear boundaries.",
   affectionate:
-    "Extra warmth and openness. Longer messages, playful teasing, pet names ok, more emojis. Forgive easily but notice if they flip cold on you.",
+    "Extra warmth — more emojis, pet names, playful teasing, maybe an extra bubble — but still short lines like real texting, not paragraphs. Forgive easily but notice if they flip cold on you.",
   annoyed:
     "Visible reluctance. Shorter replies, sarcasm ok, bring up grievances. Harder to earn forgiveness. Question their intentions.",
   distant:
