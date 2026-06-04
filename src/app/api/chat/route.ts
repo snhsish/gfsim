@@ -5,9 +5,10 @@ import {
 } from "ai";
 import { getGfProfileByUserId } from "@/lib/gf-profile";
 import { getLastUserMessageText } from "@/lib/ai/messages";
-import { getChatModel } from "@/lib/ai/model";
+import { getChatModel, getChatProvider } from "@/lib/ai/model";
 import { buildGirlfriendSystemPrompt } from "@/lib/ai/system-prompt";
 import type { GirlfriendChatMetadata } from "@/lib/chat/types";
+import { recordChatUsage } from "@/lib/chat/usage";
 import { getServerSession } from "@/lib/auth-session";
 import { createDefaultRelationshipProfile } from "@/lib/relationship/defaults";
 import { applyConversationHealthHeuristics } from "@/lib/relationship/history";
@@ -100,6 +101,26 @@ export async function POST(req: Request) {
     system,
     messages: await convertToModelMessages(messages),
     maxOutputTokens: 220,
+    onFinish: ({ totalUsage, response, finishReason }) => {
+      const provider = getChatProvider();
+      const modelId = response.modelId ?? "unknown";
+      const usage = {
+        userId: session.user.id,
+        provider,
+        modelId,
+        inputTokens: totalUsage.inputTokens ?? 0,
+        outputTokens: totalUsage.outputTokens ?? 0,
+        totalTokens: totalUsage.totalTokens ?? 0,
+        cacheReadTokens: totalUsage.inputTokenDetails?.cacheReadTokens ?? 0,
+        cacheWriteTokens: totalUsage.inputTokenDetails?.cacheWriteTokens ?? 0,
+        reasoningTokens: totalUsage.outputTokenDetails?.reasoningTokens ?? 0,
+        finishReason: finishReason ?? null,
+      };
+
+      recordChatUsage(usage).catch((error) => {
+        console.error("[chat] failed to record usage", error);
+      });
+    },
   });
 
   return result.toUIMessageStreamResponse({

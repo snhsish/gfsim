@@ -17,6 +17,8 @@ function getChatProvider(): ChatProvider {
   return "together";
 }
 
+export { getChatProvider };
+
 function isGoogleApiKey(key: string): boolean {
   return key.startsWith("AQ.") || key.startsWith("AIza");
 }

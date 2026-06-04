@@ -3,6 +3,7 @@ import {
   boolean,
   date,
   index,
+  integer,
   pgTable,
   text,
   timestamp,
@@ -115,6 +116,38 @@ export const accountRelations = relations(account, ({ one }) => ({
 export const gfProfileRelations = relations(gfProfile, ({ one }) => ({
   user: one(user, {
     fields: [gfProfile.userId],
+    references: [user.id],
+  }),
+}));
+
+export const chatUsage = pgTable(
+  "chat_usage",
+  {
+    id: text("id").primaryKey(),
+    userId: text("userId")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    provider: text("provider").notNull(),
+    modelId: text("modelId").notNull(),
+    inputTokens: integer("inputTokens").notNull().default(0),
+    outputTokens: integer("outputTokens").notNull().default(0),
+    totalTokens: integer("totalTokens").notNull().default(0),
+    cacheReadTokens: integer("cacheReadTokens").notNull().default(0),
+    cacheWriteTokens: integer("cacheWriteTokens").notNull().default(0),
+    reasoningTokens: integer("reasoningTokens").notNull().default(0),
+    finishReason: text("finishReason"),
+    createdAt: timestamp("createdAt").notNull(),
+  },
+  (table) => [
+    index("chat_usage_userId_idx").on(table.userId),
+    index("chat_usage_userId_createdAt_idx").on(table.userId, table.createdAt),
+    index("chat_usage_modelId_idx").on(table.modelId),
+  ],
+);
+
+export const chatUsageRelations = relations(chatUsage, ({ one }) => ({
+  user: one(user, {
+    fields: [chatUsage.userId],
     references: [user.id],
   }),
 }));
