@@ -48,12 +48,14 @@ export function ChatComposer({
   value,
   onValueChange,
   textareaRef: textareaRefProp,
+  disabled = false,
 }: {
   className?: string
   onSend?: (payload: { text: string; photos: File[] }) => void
   value?: string
   onValueChange?: (message: string) => void
   textareaRef?: React.RefObject<HTMLTextAreaElement | null>
+  disabled?: boolean
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const internalTextareaRef = useRef<HTMLTextAreaElement>(null)
@@ -89,7 +91,7 @@ export function ChatComposer({
     adjustTextareaHeight()
   }, [message, adjustTextareaHeight])
 
-  const canSend = message.trim().length > 0 || photos.length > 0
+  const canSend = !disabled && (message.trim().length > 0 || photos.length > 0)
 
   function insertEmoji(emoji: string) {
     const el = textareaRef.current
@@ -191,7 +193,8 @@ export function ChatComposer({
           placeholder="Message..."
           rows={2}
           wrap="soft"
-          className="block w-full min-h-12 resize-none overflow-hidden border-0 bg-transparent p-0 text-[0.9375rem] leading-6 whitespace-pre-wrap outline-none placeholder:text-muted-foreground focus-visible:ring-0"
+          disabled={disabled}
+          className="block w-full min-h-12 resize-none overflow-hidden border-0 bg-transparent p-0 text-[0.9375rem] leading-6 whitespace-pre-wrap outline-none placeholder:text-muted-foreground focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-60"
           aria-label="Message input"
         />
 

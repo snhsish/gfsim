@@ -16,7 +16,7 @@ import {
 
 import { NavSection } from "@/components/nav-section"
 import { NavSecondary } from "@/components/nav-secondary"
-import { NavUser } from "@/components/nav-user"
+import { NavUser, type NavUserInfo } from "@/components/nav-user"
 import {
   Sidebar,
   SidebarContent,
@@ -69,19 +69,16 @@ const accountNav = [
   },
 ]
 
-const user = {
-  name: "You",
-  email: "signed in",
-  avatar: "",
-}
-
 function isNavItemActive(pathname: string, url: string) {
   if (url === "#") return false
   if (url === "/chat") return pathname === "/chat"
   return pathname === url || pathname.startsWith(`${url}/`)
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({
+  user,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & { user: NavUserInfo }) {
   const pathname = usePathname()
 
   const girlfriendItems = girlfriendNav.map((item) => ({

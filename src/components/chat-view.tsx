@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport } from "ai"
@@ -10,6 +11,8 @@ import { TypingIndicator } from "@/components/typing-indicator"
 import { Item, ItemActions, ItemContent, ItemMedia, ItemTitle } from "@/components/ui/item"
 import { useGirlfriendBubbleReveal } from "@/hooks/use-girlfriend-bubble-reveal"
 import { getTextFromUIMessage } from "@/lib/ai/messages"
+import type { DailyMessageUsage } from "@/lib/chat/daily-limit"
+import { isDailyMessageLimitReached } from "@/lib/chat/daily-limit"
 import { parseGirlfriendReply } from "@/lib/chat/girlfriend-response"
 import { cn } from "@/lib/utils"
 
@@ -28,14 +31,35 @@ const chatQuestions = [
   },
 ]
 
-export function ChatView() {
+export function ChatView({
+  initialDailyMessageUsage,
+}: {
+  initialDailyMessageUsage: DailyMessageUsage
+}) {
   const [message, setMessage] = useState("")
+  const [dailyMessageUsage, setDailyMessageUsage] = useState(
+    initialDailyMessageUsage,
+  )
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { messages, sendMessage, status } = useChat({
     transport: new DefaultChatTransport({ api: "/api/chat" }),
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : String(error)
+      if (
+        message.includes("429") ||
+        message.toLowerCase().includes("daily message limit")
+      ) {
+        setDailyMessageUsage((current) => ({
+          ...current,
+          used: current.limit,
+          remaining: 0,
+        }))
+      }
+    },
   })
   const isLoading = status === "submitted" || status === "streaming"
+  const dailyLimitReached = isDailyMessageLimitReached(dailyMessageUsage)
 
   const chatEntries = useMemo(() => {
     const last = messages.at(-1)
@@ -75,17 +99,39 @@ export function ChatView() {
   }, [messages, isLoading])
 
   const wasLoadingRef = useRef(false)
+  const loadStartedAssistantCountRef = useRef(0)
   const [justFinishedAssistantId, setJustFinishedAssistantId] = useState<
     string | null
   >(null)
 
   useEffect(() => {
-    if (wasLoadingRef.current && !isLoading) {
+    const wasLoading = wasLoadingRef.current
+
+    if (!wasLoading && isLoading) {
+      loadStartedAssistantCountRef.current = messages.filter(
+        (m) => m.role === "assistant",
+      ).length
+    }
+
+    if (wasLoading && !isLoading) {
+      const assistantCount = messages.filter(
+        (m) => m.role === "assistant",
+      ).length
+
+      if (assistantCount > loadStartedAssistantCountRef.current) {
+        setDailyMessageUsage((current) => ({
+          ...current,
+          used: Math.min(current.limit, current.used + 1),
+          remaining: Math.max(0, current.remaining - 1),
+        }))
+      }
+
       const finished = [...messages]
         .reverse()
         .find((m) => m.role === "assistant")
       setJustFinishedAssistantId(finished?.id ?? null)
     }
+
     wasLoadingRef.current = isLoading
   }, [isLoading, messages])
 
@@ -131,12 +177,16 @@ export function ChatView() {
   }
 
   async function handleSend(payload: { text: string; photos: File[] }) {
-    if (!payload.text.trim()) return
+    if (!payload.text.trim() || dailyLimitReached) return
     await sendMessage({
       text: payload.text,
     })
     setMessage("")
   }
+
+  const limitHint = dailyLimitReached
+    ? `You've used all ${dailyMessageUsage.limit} messages for today. Resets at midnight UTC.`
+    : `${dailyMessageUsage.remaining} of ${dailyMessageUsage.limit} messages left today`
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -243,13 +293,27 @@ export function ChatView() {
         )}
       </div>
       <div className="shrink-0 px-4 pb-3 pt-2">
-        <ChatComposer
-          className="mx-auto max-w-3xl"
-          value={message}
-          onValueChange={setMessage}
-          textareaRef={textareaRef}
-          onSend={handleSend}
-        />
+        <div className="mx-auto flex max-w-3xl flex-col gap-2">
+          <p className="px-1 text-center text-xs text-muted-foreground">
+            {dailyLimitReached ? (
+              <>
+                {limitHint}{" "}
+                <Link href="/account/usage" className="underline underline-offset-2">
+                  View usage
+                </Link>
+              </>
+            ) : (
+              limitHint
+            )}
+          </p>
+          <ChatComposer
+            value={message}
+            onValueChange={setMessage}
+            textareaRef={textareaRef}
+            onSend={handleSend}
+            disabled={dailyLimitReached || isLoading}
+          />
+        </div>
       </div>
     </div>
   )

@@ -8,7 +8,11 @@ import { getLastUserMessageText } from "@/lib/ai/messages";
 import { getChatModel, getChatProvider } from "@/lib/ai/model";
 import { buildGirlfriendSystemPrompt } from "@/lib/ai/system-prompt";
 import type { GirlfriendChatMetadata } from "@/lib/chat/types";
-import { recordChatUsage } from "@/lib/chat/usage";
+import {
+  getDailyMessageUsage,
+  isDailyMessageLimitReached,
+  recordChatUsage,
+} from "@/lib/chat/usage";
 import { getServerSession } from "@/lib/auth-session";
 import { createDefaultRelationshipProfile } from "@/lib/relationship/defaults";
 import { applyConversationHealthHeuristics } from "@/lib/relationship/history";
@@ -46,6 +50,18 @@ export async function POST(req: Request) {
     return new Response("Complete onboarding before chatting.", {
       status: 403,
     });
+  }
+
+  const dailyUsage = await getDailyMessageUsage(session.user.id);
+  if (isDailyMessageLimitReached(dailyUsage)) {
+    return Response.json(
+      {
+        error: `Daily message limit reached (${dailyUsage.limit} per day). Try again after midnight UTC.`,
+        code: "daily_message_limit",
+        dailyUsage,
+      },
+      { status: 429 },
+    );
   }
 
   let body: { messages: UIMessage[] };

@@ -2,6 +2,13 @@ import { and, eq, gte, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { chatUsage } from "@/db/schema";
+import {
+  DAILY_MESSAGE_LIMIT,
+  type DailyMessageUsage,
+} from "@/lib/chat/daily-limit";
+
+export { DAILY_MESSAGE_LIMIT, type DailyMessageUsage } from "@/lib/chat/daily-limit";
+export { isDailyMessageLimitReached } from "@/lib/chat/daily-limit";
 
 export type ChatUsageRecordInput = {
   userId: string;
@@ -71,6 +78,39 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 function formatDayKey(date: Date): string {
   return date.toISOString().slice(0, 10);
+}
+
+function getStartOfUtcDay(date = new Date()): Date {
+  const start = new Date(date);
+  start.setUTCHours(0, 0, 0, 0);
+  return start;
+}
+
+export async function getDailyMessageCount(userId: string): Promise<number> {
+  const startOfDay = getStartOfUtcDay();
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(chatUsage)
+    .where(
+      and(
+        eq(chatUsage.userId, userId),
+        gte(chatUsage.createdAt, startOfDay),
+      ),
+    );
+
+  return row?.count ?? 0;
+}
+
+export async function getDailyMessageUsage(
+  userId: string,
+): Promise<DailyMessageUsage> {
+  const used = await getDailyMessageCount(userId);
+
+  return {
+    used,
+    limit: DAILY_MESSAGE_LIMIT,
+    remaining: Math.max(0, DAILY_MESSAGE_LIMIT - used),
+  };
 }
 
 export async function getUsageSummary(

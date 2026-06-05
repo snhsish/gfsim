@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import {
   ActivityIcon,
+  CalendarClockIcon,
   CoinsIcon,
   MessageSquareIcon,
   ZapIcon,
@@ -17,7 +18,11 @@ import {
 } from "@/components/ui/card";
 import { getServerSession } from "@/lib/auth-session";
 import { getChatModelId } from "@/lib/ai/model";
-import { getUsageSummary } from "@/lib/chat/usage";
+import {
+  DAILY_MESSAGE_LIMIT,
+  getDailyMessageUsage,
+  getUsageSummary,
+} from "@/lib/chat/usage";
 import { formatCompactNumber, formatNumber } from "@/lib/format";
 
 export const metadata: Metadata = {
@@ -36,22 +41,32 @@ function formatDate(value: Date | string | null | undefined): string {
 
 export default async function UsagePage() {
   const session = await getServerSession();
-  const summary = session
-    ? await getUsageSummary(session.user.id, 14)
-    : {
-        totals: {
-          totalMessages: 0,
-          totalInputTokens: 0,
-          totalOutputTokens: 0,
-          totalTokens: 0,
-          totalCachedTokens: 0,
-          totalReasoningTokens: 0,
-          firstUsedAt: null,
-          lastUsedAt: null,
+  const [summary, dailyMessageUsage] = session
+    ? await Promise.all([
+        getUsageSummary(session.user.id, 14),
+        getDailyMessageUsage(session.user.id),
+      ])
+    : [
+        {
+          totals: {
+            totalMessages: 0,
+            totalInputTokens: 0,
+            totalOutputTokens: 0,
+            totalTokens: 0,
+            totalCachedTokens: 0,
+            totalReasoningTokens: 0,
+            firstUsedAt: null,
+            lastUsedAt: null,
+          },
+          last14Days: [],
+          byModel: [],
         },
-        last14Days: [],
-        byModel: [],
-      };
+        {
+          used: 0,
+          limit: DAILY_MESSAGE_LIMIT,
+          remaining: DAILY_MESSAGE_LIMIT,
+        },
+      ];
 
   const { totals, last14Days, byModel } = summary;
   const peakDay =
@@ -79,53 +94,67 @@ export default async function UsagePage() {
           </p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            label="Total messages"
-            value={formatNumber(totals.totalMessages)}
-            hint={
-              totals.lastUsedAt
-                ? `Last used ${formatDate(totals.lastUsedAt)}`
-                : "No chats yet"
-            }
-            icon={<MessageSquareIcon />}
-          />
-          <StatCard
-            label="Total tokens"
-            value={formatCompactNumber(totals.totalTokens)}
-            hint={`${formatNumber(totals.totalInputTokens)} in : ${formatNumber(totals.totalOutputTokens)} out`}
-            icon={<CoinsIcon />}
-          />
-          <StatCard
-            label="Avg tokens / message"
-            value={
-              totals.totalMessages > 0
-                ? formatNumber(averageTokensPerMessage)
-                : "—"
-            }
-            hint={
-              totals.totalCachedTokens > 0
-                ? `${formatCompactNumber(
-                    totals.totalCachedTokens,
-                  )} cached tokens reused`
-                : "Prompt cache not used"
-            }
-            icon={<ZapIcon />}
-          />
-          <StatCard
-            label="Peak day"
-            value={
-              peakDay && peakDay.totalTokens > 0
-                ? formatCompactNumber(peakDay.totalTokens)
-                : "—"
-            }
-            hint={
-              peakDay && peakDay.totalTokens > 0
-                ? `${formatDate(peakDay.date)} : ${peakDay.messageCount} msg`
-                : "Send a message to see trends"
-            }
-            icon={<ActivityIcon />}
-          />
+        <div className="flex flex-col gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <StatCard
+              label="Messages today"
+              value={`${formatNumber(dailyMessageUsage.used)} / ${formatNumber(dailyMessageUsage.limit)}`}
+              hint={
+                dailyMessageUsage.remaining > 0
+                  ? `${formatNumber(dailyMessageUsage.remaining)} remaining · resets midnight UTC`
+                  : "Daily limit reached · resets midnight UTC"
+              }
+              icon={<CalendarClockIcon />}
+            />
+            <StatCard
+              label="Total messages"
+              value={formatNumber(totals.totalMessages)}
+              hint={
+                totals.lastUsedAt
+                  ? `Last used ${formatDate(totals.lastUsedAt)}`
+                  : "No chats yet"
+              }
+              icon={<MessageSquareIcon />}
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <StatCard
+              label="Total tokens"
+              value={formatCompactNumber(totals.totalTokens)}
+              hint={`${formatNumber(totals.totalInputTokens)} in : ${formatNumber(totals.totalOutputTokens)} out`}
+              icon={<CoinsIcon />}
+            />
+            <StatCard
+              label="Avg tokens / message"
+              value={
+                totals.totalMessages > 0
+                  ? formatNumber(averageTokensPerMessage)
+                  : "—"
+              }
+              hint={
+                totals.totalCachedTokens > 0
+                  ? `${formatCompactNumber(
+                      totals.totalCachedTokens,
+                    )} cached tokens reused`
+                  : "Prompt cache not used"
+              }
+              icon={<ZapIcon />}
+            />
+            <StatCard
+              label="Peak day"
+              value={
+                peakDay && peakDay.totalTokens > 0
+                  ? formatCompactNumber(peakDay.totalTokens)
+                  : "—"
+              }
+              hint={
+                peakDay && peakDay.totalTokens > 0
+                  ? `${formatDate(peakDay.date)} : ${peakDay.messageCount} msg`
+                  : "Send a message to see trends"
+              }
+              icon={<ActivityIcon />}
+            />
+          </div>
         </div>
 
         <Card>
