@@ -21,6 +21,10 @@ import {
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import EmojiSelector from "@/components/emoji-selector"
+import {
+  MAX_USER_MESSAGE_LENGTH,
+  truncateUserMessage,
+} from "@/lib/chat/message-limit"
 
 const MAX_TEXTAREA_HEIGHT = 160
 
@@ -101,7 +105,9 @@ export function ChatComposer({
     }
     const start = el.selectionStart
     const end = el.selectionEnd
-    const next = message.slice(0, start) + emoji + message.slice(end)
+    const next = truncateUserMessage(
+      message.slice(0, start) + emoji + message.slice(end),
+    )
     setMessage(next)
     requestAnimationFrame(() => {
       el.focus()
@@ -187,12 +193,15 @@ export function ChatComposer({
         <textarea
           ref={textareaRef}
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          onChange={(e) =>
+            setMessage(truncateUserMessage(e.target.value))
+          }
           onInput={adjustTextareaHeight}
           onKeyDown={handleKeyDown}
           placeholder="Message..."
           rows={2}
           wrap="soft"
+          maxLength={MAX_USER_MESSAGE_LENGTH}
           disabled={disabled}
           className="block w-full min-h-12 resize-none overflow-hidden border-0 bg-transparent p-0 text-[0.9375rem] leading-6 whitespace-pre-wrap outline-none placeholder:text-muted-foreground focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-60"
           aria-label="Message input"

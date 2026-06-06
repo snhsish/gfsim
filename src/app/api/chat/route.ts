@@ -13,6 +13,10 @@ import {
   isDailyMessageLimitReached,
   recordChatUsage,
 } from "@/lib/chat/usage";
+import {
+  isUserMessageTooLong,
+  MAX_USER_MESSAGE_LENGTH,
+} from "@/lib/chat/message-limit";
 import { getServerSession } from "@/lib/auth-session";
 import { createDefaultRelationshipProfile } from "@/lib/relationship/defaults";
 import { applyConversationHealthHeuristics } from "@/lib/relationship/history";
@@ -84,6 +88,17 @@ export async function POST(req: Request) {
   );
 
   const lastUserText = getLastUserMessageText(messages);
+  if (lastUserText && isUserMessageTooLong(lastUserText)) {
+    return Response.json(
+      {
+        error: `Message must be at most ${MAX_USER_MESSAGE_LENGTH} characters.`,
+        code: "message_too_long",
+        maxLength: MAX_USER_MESSAGE_LENGTH,
+      },
+      { status: 400 },
+    );
+  }
+
   let sentiment = null;
 
   if (lastUserText) {

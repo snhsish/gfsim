@@ -13,6 +13,7 @@ import { useGirlfriendBubbleReveal } from "@/hooks/use-girlfriend-bubble-reveal"
 import { getTextFromUIMessage } from "@/lib/ai/messages"
 import type { DailyMessageUsage } from "@/lib/chat/daily-limit"
 import { isDailyMessageLimitReached } from "@/lib/chat/daily-limit"
+import { truncateUserMessage } from "@/lib/chat/message-limit"
 import { parseGirlfriendReply } from "@/lib/chat/girlfriend-response"
 import { cn } from "@/lib/utils"
 
@@ -186,9 +187,10 @@ export function ChatView({
   }
 
   async function handleSend(payload: { text: string; photos: File[] }) {
-    if (!payload.text.trim() || dailyLimitReached) return
+    const text = truncateUserMessage(payload.text.trim())
+    if (!text || dailyLimitReached) return
     await sendMessage({
-      text: payload.text,
+      text,
     })
     setMessage("")
   }
