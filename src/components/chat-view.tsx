@@ -31,6 +31,15 @@ const chatQuestions = [
   },
 ]
 
+type ChatEntry =
+  | { id: string; role: "user"; bubbles: string[] }
+  | {
+      id: string
+      role: "assistant"
+      bubbles: string[]
+      reaction: string | undefined
+    }
+
 export function ChatView({
   initialDailyMessageUsage,
 }: {
@@ -66,7 +75,7 @@ export function ChatView({
     const hideStreamingAssistant =
       isLoading && last?.role === "assistant"
 
-    return messages.flatMap((chatMessage) => {
+    return messages.flatMap((chatMessage): ChatEntry[] => {
       if (
         hideStreamingAssistant &&
         chatMessage.id === last?.id

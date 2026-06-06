@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const AUTH_API_PREFIX = "/api/auth";
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hasSession = Boolean(getSessionCookie(request));
 
