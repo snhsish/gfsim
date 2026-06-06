@@ -15,6 +15,7 @@ import {
 } from "lucide-react"
 
 import { NavSection } from "@/components/nav-section"
+import { SidebarOnboardingProvider } from "@/components/sidebar-onboarding"
 import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser, type NavUserInfo } from "@/components/nav-user"
 import {
@@ -33,16 +34,19 @@ const girlfriendNav = [
     title: "Chat",
     url: "/chat",
     icon: <MessageCircleIcon />,
+    onboardingId: "chat",
   },
   {
     title: "Memories",
     url: "/memories",
     icon: <SparklesIcon />,
+    onboardingId: "memories",
   },
   {
     title: "Personality",
     url: "/chat/personality",
     icon: <HeartIcon />,
+    onboardingId: "personality",
   },
   {
     title: "Settings",
@@ -61,11 +65,13 @@ const accountNav = [
     title: "Usage",
     url: "/account/usage",
     icon: <BarChart3Icon />,
+    onboardingId: "usage",
   },
   {
     title: "Configure",
     url: "/account/config",
     icon: <KeyIcon />,
+    onboardingId: "configure",
   },
 ]
 
@@ -88,42 +94,44 @@ export function AppSidebar({
 
   return (
     <Sidebar variant="inset" {...props}>
-      <SidebarHeader className="flex justify-center items-center">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <Link href="/chat" className="flex justify-center items-center rounded-full">
-                <div className="flex aspect-3/1 h-8 w-24 items-center justify-center rounded-none text-sidebar-primary-foreground">
-                  <Image
-                    src="/gfsim.png"
-                    alt="GFSim"
-                    height={125}
-                    width={375}
-                    className="size-full rounded-none"
-                  />
-                </div>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarHeader>
-      <SidebarContent>
-        <NavSection label="Your Girlfriend" items={girlfriendItems} />
-        <NavSection label="Your Account" items={accountNav} />
-        <NavSecondary
-          items={[
-            {
-              title: "Help",
-              url: "mailto:mail@snehasish.xyz",
-              icon: <LifeBuoyIcon />,
-            },
-          ]}
-          className="mt-auto"
-        />
-      </SidebarContent>
-      <SidebarFooter>
-        <NavUser user={user} />
-      </SidebarFooter>
+      <SidebarOnboardingProvider>
+        <SidebarHeader className="flex justify-center items-center">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton size="lg" asChild>
+                <Link href="/chat" className="flex justify-center items-center rounded-full">
+                  <div className="flex aspect-3/1 h-8 w-24 items-center justify-center rounded-none text-sidebar-primary-foreground">
+                    <Image
+                      src="/gfsim.png"
+                      alt="GFSim"
+                      height={125}
+                      width={375}
+                      className="size-full rounded-none"
+                    />
+                  </div>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
+        <SidebarContent>
+          <NavSection label="Your Girlfriend" items={girlfriendItems} />
+          <NavSection label="Your Account" items={accountNav} />
+          <NavSecondary
+            items={[
+              {
+                title: "Help",
+                url: "mailto:mail@snehasish.xyz",
+                icon: <LifeBuoyIcon />,
+              },
+            ]}
+            className="mt-auto"
+          />
+        </SidebarContent>
+        <SidebarFooter>
+          <NavUser user={user} />
+        </SidebarFooter>
+      </SidebarOnboardingProvider>
     </Sidebar>
   )
 }

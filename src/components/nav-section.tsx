@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { SidebarOnboardingNavItem } from "@/components/sidebar-onboarding"
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -19,6 +20,7 @@ export function NavSection({
     url: string
     icon: React.ReactNode
     isActive?: boolean
+    onboardingId?: string
   }[]
 }) {
   return (
@@ -27,16 +29,18 @@ export function NavSection({
       <SidebarMenu>
         {items.map((item) => (
           <SidebarMenuItem key={item.title}>
-            <SidebarMenuButton
-              asChild
-              tooltip={item.title}
-              isActive={item.isActive}
-            >
-              <Link href={item.url}>
-                {item.icon}
-                <span>{item.title}</span>
-              </Link>
-            </SidebarMenuButton>
+            <SidebarOnboardingNavItem onboardingId={item.onboardingId}>
+              <SidebarMenuButton
+                asChild
+                tooltip={item.title}
+                isActive={item.isActive}
+              >
+                <Link href={item.url}>
+                  {item.icon}
+                  <span>{item.title}</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarOnboardingNavItem>
           </SidebarMenuItem>
         ))}
       </SidebarMenu>
