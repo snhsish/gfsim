@@ -1,6 +1,8 @@
 import { ChatShellClient } from "@/components/chat-shell-client"
+import type { GirlfriendHeaderInfo } from "@/components/chat-shell-client"
 import type { NavUserInfo } from "@/components/nav-user"
 import { getServerSession } from "@/lib/auth-session"
+import { getGfProfileByUserId } from "@/lib/gf-profile"
 
 export async function ChatShell({
   children,
@@ -23,8 +25,13 @@ export async function ChatShell({
         avatar: "",
       }
 
+  const profile = session ? await getGfProfileByUserId(session.user.id) : null
+  const girlfriend: GirlfriendHeaderInfo | null = profile
+    ? { name: profile.name }
+    : null
+
   return (
-    <ChatShellClient breadcrumb={breadcrumb} user={user}>
+    <ChatShellClient breadcrumb={breadcrumb} user={user} girlfriend={girlfriend}>
       {children}
     </ChatShellClient>
   )

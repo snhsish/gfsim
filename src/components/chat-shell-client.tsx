@@ -16,15 +16,33 @@ import {
 } from "@/components/ui/sidebar"
 import { Avatar, AvatarBadge, AvatarFallback, AvatarImage } from "./ui/avatar"
 
+export type GirlfriendHeaderInfo = {
+  name: string
+  avatar?: string | null
+}
+
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase()
+}
+
 export function ChatShellClient({
   children,
   breadcrumb = "Chat",
   user,
+  girlfriend = null,
 }: {
   children: React.ReactNode
   breadcrumb?: string
   user: NavUserInfo
+  girlfriend?: GirlfriendHeaderInfo | null
 }) {
+  const girlfriendInitials = girlfriend ? getInitials(girlfriend.name) : ""
+
   return (
     <SidebarProvider className="h-svh min-h-0 overflow-hidden">
       <AppSidebar user={user} />
@@ -36,47 +54,37 @@ export function ChatShellClient({
               orientation="vertical"
               className="mr-2 data-vertical:h-4 data-vertical:self-auto"
             />
-            {
-              breadcrumb !== "Chat" && (
-                <Breadcrumb>
-                  <BreadcrumbList>
-                    <BreadcrumbItem>
-                      <BreadcrumbPage>{breadcrumb}</BreadcrumbPage>
-                    </BreadcrumbItem>
-                  </BreadcrumbList>
-                </Breadcrumb>
-              )
-            }
-            {
-              breadcrumb == "Chat" && (
-                <div className="flex items-center gap-4">
-                  <Avatar className="size-10">
+            {breadcrumb !== "Chat" && (
+              <Breadcrumb>
+                <BreadcrumbList>
+                  <BreadcrumbItem>
+                    <BreadcrumbPage>{breadcrumb}</BreadcrumbPage>
+                  </BreadcrumbItem>
+                </BreadcrumbList>
+              </Breadcrumb>
+            )}
+            {breadcrumb === "Chat" && girlfriend && (
+              <div className="flex items-center gap-4">
+                <Avatar className="size-10">
+                  {girlfriend.avatar ? (
                     <AvatarImage
-                      src="https://github.com/snhsish.png"
-                      alt="Avatar"
+                      src={girlfriend.avatar}
+                      alt={girlfriend.name}
                     />
-                    <AvatarFallback>
-                      E
-                    </AvatarFallback>
-                    <AvatarBadge
-                      className="bg-green-600 dark:bg-green-400"
-                    />
-                  </Avatar>
+                  ) : null}
+                  <AvatarFallback>{girlfriendInitials}</AvatarFallback>
+                  <AvatarBadge className="bg-green-600 dark:bg-green-400" />
+                </Avatar>
 
-                  <div className="flex flex-col justify-center">
-                    <h1 className="font-medium">
-                      Emma
-                    </h1>
-                    <p className="text-xs text-muted-foreground">
-                      Last online 12 hrs ago
-                    </p>
-                  </div>
+                <div className="flex flex-col justify-center">
+                  <h1 className="font-medium">{girlfriend.name}</h1>
+                  <p className="text-xs text-muted-foreground">
+                    Last online 12 hrs ago
+                  </p>
                 </div>
-              )
-            }
+              </div>
+            )}
           </div>
-
-
         </header>
         {children}
       </SidebarInset>
