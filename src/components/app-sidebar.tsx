@@ -48,11 +48,6 @@ const girlfriendNav = [
     icon: <HeartIcon />,
     onboardingId: "personality",
   },
-  {
-    title: "Settings",
-    url: "/settings",
-    icon: <Settings2Icon />,
-  },
 ]
 
 const accountNav = [
@@ -73,6 +68,11 @@ const accountNav = [
     icon: <KeyIcon />,
     onboardingId: "configure",
   },
+  {
+    title: "Settings",
+    url: "/settings",
+    icon: <Settings2Icon />,
+  },
 ]
 
 function isNavItemActive(pathname: string, url: string) {
@@ -88,6 +88,11 @@ export function AppSidebar({
   const pathname = usePathname()
 
   const girlfriendItems = girlfriendNav.map((item) => ({
+    ...item,
+    isActive: isNavItemActive(pathname, item.url),
+  }))
+
+  const accountItems = accountNav.map((item) => ({
     ...item,
     isActive: isNavItemActive(pathname, item.url),
   }))
@@ -116,7 +121,7 @@ export function AppSidebar({
         </SidebarHeader>
         <SidebarContent>
           <NavSection label="Your Girlfriend" items={girlfriendItems} />
-          <NavSection label="Your Account" items={accountNav} />
+          <NavSection label="Your Account" items={accountItems} />
           <NavSecondary
             items={[
               {
