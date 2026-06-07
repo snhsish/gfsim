@@ -1,9 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useChat } from "@ai-sdk/react"
-import { DefaultChatTransport } from "ai"
+import { DefaultChatTransport, type UIMessage } from "ai"
 import { ChevronRightIcon, InfoIcon, MessageCircleHeartIcon, SunIcon } from "lucide-react"
 import { PiHandWaving } from "react-icons/pi"
 import { ChatComposer } from "@/components/chat-composer"
@@ -11,6 +11,10 @@ import { TypingIndicator } from "@/components/typing-indicator"
 import { Item, ItemActions, ItemContent, ItemMedia, ItemTitle } from "@/components/ui/item"
 import { useGirlfriendBubbleReveal } from "@/hooks/use-girlfriend-bubble-reveal"
 import { getTextFromUIMessage } from "@/lib/ai/messages"
+import {
+  CHAT_LOAD_OLDER_LIMIT,
+  CHAT_SCROLL_LOAD_THRESHOLD,
+} from "@/lib/chat/constants"
 import type { DailyMessageUsage } from "@/lib/chat/daily-limit"
 import { isDailyMessageLimitReached } from "@/lib/chat/daily-limit"
 import { truncateUserMessage } from "@/lib/chat/message-limit"
@@ -43,17 +47,27 @@ type ChatEntry =
 
 export function ChatView({
   initialDailyMessageUsage,
+  initialMessages = [],
+  initialHasMoreOlder = false,
 }: {
   initialDailyMessageUsage: DailyMessageUsage
+  initialMessages?: UIMessage[]
+  initialHasMoreOlder?: boolean
 }) {
   const [message, setMessage] = useState("")
   const [dailyMessageUsage, setDailyMessageUsage] = useState(
     initialDailyMessageUsage,
   )
+  const [hasMoreOlder, setHasMoreOlder] = useState(initialHasMoreOlder)
+  const [isLoadingOlder, setIsLoadingOlder] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const { messages, sendMessage, status } = useChat({
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const shouldAutoScrollRef = useRef(true)
+  const isLoadingOlderRef = useRef(false)
+  const { messages, sendMessage, setMessages, status } = useChat({
     transport: new DefaultChatTransport({ api: "/api/chat" }),
+    messages: initialMessages,
     onError: (error) => {
       const message = error instanceof Error ? error.message : String(error)
       if (
@@ -172,8 +186,85 @@ export function ChatView({
 
   const hasMessages = messages.length > 0
 
+  const loadOlderMessages = useCallback(async () => {
+    if (
+      isLoadingOlderRef.current ||
+      !hasMoreOlder ||
+      messages.length === 0
+    ) {
+      return
+    }
+
+    const oldestMessageId = messages[0]?.id
+    if (!oldestMessageId) return
+
+    isLoadingOlderRef.current = true
+    setIsLoadingOlder(true)
+    shouldAutoScrollRef.current = false
+
+    const container = scrollContainerRef.current
+    const previousScrollHeight = container?.scrollHeight ?? 0
+    const previousScrollTop = container?.scrollTop ?? 0
+
+    try {
+      const response = await fetch(
+        `/api/chat/messages?before=${encodeURIComponent(oldestMessageId)}&limit=${CHAT_LOAD_OLDER_LIMIT}`,
+      )
+
+      if (!response.ok) {
+        throw new Error("Failed to load older messages")
+      }
+
+      const data = (await response.json()) as {
+        messages: UIMessage[]
+        hasMore: boolean
+      }
+
+      if (data.messages.length > 0) {
+        setMessages((current) => {
+          const existingIds = new Set(current.map((entry) => entry.id))
+          const olderMessages = data.messages.filter(
+            (entry) => !existingIds.has(entry.id),
+          )
+          return [...olderMessages, ...current]
+        })
+      }
+
+      setHasMoreOlder(data.hasMore)
+    } catch (error) {
+      console.error("[chat] failed to load older messages", error)
+    } finally {
+      isLoadingOlderRef.current = false
+      setIsLoadingOlder(false)
+
+      requestAnimationFrame(() => {
+        if (!container) return
+        container.scrollTop =
+          previousScrollTop + (container.scrollHeight - previousScrollHeight)
+      })
+    }
+  }, [hasMoreOlder, messages, setMessages])
+
+  function handleScroll() {
+    const container = scrollContainerRef.current
+    if (!container || !hasMoreOlder || isLoadingOlderRef.current) return
+
+    const maxScrollTop = container.scrollHeight - container.clientHeight
+    if (maxScrollTop <= 0) return
+
+    const scrollRatio = container.scrollTop / maxScrollTop
+    if (scrollRatio <= CHAT_SCROLL_LOAD_THRESHOLD) {
+      void loadOlderMessages()
+    }
+
+    shouldAutoScrollRef.current =
+      maxScrollTop - container.scrollTop < 120
+  }
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    if (shouldAutoScrollRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    }
   }, [chatEntries.length, showTypingIndicator, reveal?.visibleCount])
 
   function insertSuggestion(text: string) {
@@ -189,6 +280,7 @@ export function ChatView({
   async function handleSend(payload: { text: string; photos: File[] }) {
     const text = truncateUserMessage(payload.text.trim())
     if (!text || dailyLimitReached) return
+    shouldAutoScrollRef.current = true
     await sendMessage({
       text,
     })
@@ -201,9 +293,18 @@ export function ChatView({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 sm:p-8">
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 sm:p-8"
+      >
         {hasMessages ? (
           <div className="mx-auto flex w-full max-w-3xl flex-col gap-2">
+            {isLoadingOlder ? (
+              <p className="py-2 text-center text-xs text-muted-foreground">
+                Loading earlier messages…
+              </p>
+            ) : null}
             {chatEntries.map((entry) => {
               const isSender = entry.role === "user"
               const isRevealing =
@@ -329,3 +430,4 @@ export function ChatView({
     </div>
   )
 }
+

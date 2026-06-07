@@ -4,9 +4,10 @@ import {
   type UIMessage,
 } from "ai";
 import { getGfProfileByUserId } from "@/lib/gf-profile";
-import { getLastUserMessageText } from "@/lib/ai/messages";
+import { getLastUserMessageText, getTextFromUIMessage } from "@/lib/ai/messages";
 import { getChatModel, getChatProvider } from "@/lib/ai/model";
 import { buildGirlfriendSystemPrompt } from "@/lib/ai/system-prompt";
+import { CHAT_LLM_CONTEXT_LIMIT } from "@/lib/chat/constants";
 import type { GirlfriendChatMetadata } from "@/lib/chat/types";
 import {
   getDailyMessageUsage,
@@ -17,6 +18,12 @@ import {
   isUserMessageTooLong,
   MAX_USER_MESSAGE_LENGTH,
 } from "@/lib/chat/message-limit";
+import {
+  getLastPersistableUserMessage,
+  isPersistableAssistantMessage,
+  saveChatMessage,
+  saveUIMessage,
+} from "@/lib/chat/persistence";
 import { getServerSession } from "@/lib/auth-session";
 import { createDefaultRelationshipProfile } from "@/lib/relationship/defaults";
 import { applyConversationHealthHeuristics } from "@/lib/relationship/history";
@@ -80,14 +87,23 @@ export async function POST(req: Request) {
     return new Response("messages must be an array", { status: 400 });
   }
 
+  const lastUserMessage = getLastPersistableUserMessage(messages);
+  if (lastUserMessage) {
+    saveUIMessage(session.user.id, lastUserMessage, "user").catch((error) => {
+      console.error("[chat] failed to save user message", error);
+    });
+  }
+
+  const contextMessages = messages.slice(-CHAT_LLM_CONTEXT_LIMIT);
+
   let relationship = createDefaultRelationshipProfile(gfProfile.createdAt);
   relationship.relationshipHealth = applyConversationHealthHeuristics(
-    messages,
+    contextMessages,
     relationship.relationshipHealth,
     { skipLastUserMessage: true },
   );
 
-  const lastUserText = getLastUserMessageText(messages);
+  const lastUserText = getLastUserMessageText(contextMessages);
   if (lastUserText && isUserMessageTooLong(lastUserText)) {
     return Response.json(
       {
@@ -130,7 +146,7 @@ export async function POST(req: Request) {
   const result = streamText({
     model: getChatModel(),
     system,
-    messages: await convertToModelMessages(messages),
+    messages: await convertToModelMessages(contextMessages),
     maxOutputTokens: 220,
     onFinish: ({ totalUsage, response, finishReason }) => {
       const provider = getChatProvider();
@@ -161,6 +177,20 @@ export async function POST(req: Request) {
         return metadata;
       }
       return undefined;
+    },
+    onFinish: ({ responseMessage, isAborted }) => {
+      if (isAborted || !isPersistableAssistantMessage(responseMessage)) {
+        return;
+      }
+
+      saveChatMessage({
+        id: responseMessage.id,
+        userId: session.user.id,
+        role: "assistant",
+        content: getTextFromUIMessage(responseMessage),
+      }).catch((error) => {
+        console.error("[chat] failed to save assistant message", error);
+      });
     },
   });
 }

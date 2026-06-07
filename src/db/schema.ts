@@ -97,33 +97,6 @@ export const gfProfile = pgTable(
   (table) => [index("gf_profile_userId_idx").on(table.userId)],
 );
 
-export const userRelations = relations(user, ({ one, many }) => ({
-  sessions: many(session),
-  accounts: many(account),
-  gfProfile: one(gfProfile),
-}));
-
-export const sessionRelations = relations(session, ({ one }) => ({
-  user: one(user, {
-    fields: [session.userId],
-    references: [user.id],
-  }),
-}));
-
-export const accountRelations = relations(account, ({ one }) => ({
-  user: one(user, {
-    fields: [account.userId],
-    references: [user.id],
-  }),
-}));
-
-export const gfProfileRelations = relations(gfProfile, ({ one }) => ({
-  user: one(user, {
-    fields: [gfProfile.userId],
-    references: [user.id],
-  }),
-}));
-
 export const chatUsage = pgTable(
   "chat_usage",
   {
@@ -152,6 +125,60 @@ export const chatUsage = pgTable(
 export const chatUsageRelations = relations(chatUsage, ({ one }) => ({
   user: one(user, {
     fields: [chatUsage.userId],
+    references: [user.id],
+  }),
+}));
+
+export const chatMessage = pgTable(
+  "chat_message",
+  {
+    id: text("id").primaryKey(),
+    userId: text("userId")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    role: text("role").notNull(),
+    content: text("content").notNull(),
+    createdAt: timestamp("createdAt").notNull(),
+  },
+  (table) => [
+    index("chat_message_userId_createdAt_idx").on(
+      table.userId,
+      table.createdAt,
+    ),
+  ],
+);
+
+export const chatMessageRelations = relations(chatMessage, ({ one }) => ({
+  user: one(user, {
+    fields: [chatMessage.userId],
+    references: [user.id],
+  }),
+}));
+
+export const userRelations = relations(user, ({ one, many }) => ({
+  sessions: many(session),
+  accounts: many(account),
+  gfProfile: one(gfProfile),
+  chatMessages: many(chatMessage),
+}));
+
+export const sessionRelations = relations(session, ({ one }) => ({
+  user: one(user, {
+    fields: [session.userId],
+    references: [user.id],
+  }),
+}));
+
+export const accountRelations = relations(account, ({ one }) => ({
+  user: one(user, {
+    fields: [account.userId],
+    references: [user.id],
+  }),
+}));
+
+export const gfProfileRelations = relations(gfProfile, ({ one }) => ({
+  user: one(user, {
+    fields: [gfProfile.userId],
     references: [user.id],
   }),
 }));
