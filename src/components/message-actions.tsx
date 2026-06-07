@@ -23,21 +23,25 @@ const actionButtonClassName =
 
 export function MessageReactionBadge({
   emoji,
-  className,
+  align = "left",
 }: {
   emoji: string
-  className?: string
+  align?: "left" | "right"
 }) {
   return (
-    <span
+    <div
       className={cn(
-        "absolute bottom-0 z-10 inline-flex min-w-6 -translate-y-1/2 items-center justify-center rounded-full border border-border/60 bg-background px-1.5 py-0.5 text-sm shadow-sm",
-        className,
+        "flex w-full -mt-2.5",
+        align === "left" ? "justify-start" : "justify-end",
       )}
-      aria-label={`Reacted with ${emoji}`}
     >
-      {emoji}
-    </span>
+      <span
+        className="inline-flex min-w-6 items-center justify-center rounded-full border border-border/50 bg-background px-2 py-0.5 text-sm shadow-sm"
+        aria-label={`Reacted with ${emoji}`}
+      >
+        {emoji}
+      </span>
+    </div>
   )
 }
 

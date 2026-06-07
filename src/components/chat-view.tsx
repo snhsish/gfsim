@@ -372,6 +372,7 @@ export function ChatView({
                     className={cn(
                       "flex max-w-[80%] flex-col gap-1",
                       isSender ? "items-end" : "items-start",
+                      messageReaction && "pb-0.5",
                     )}
                   >
                     {!isSender && entry.selfReaction ? (
@@ -382,35 +383,25 @@ export function ChatView({
                         {entry.selfReaction}
                       </span>
                     ) : null}
-                    {visibleBubbles.map((bubble, index) => {
-                      const isLastBubble = index === visibleBubbles.length - 1
-
-                      return (
-                        <div
-                          key={`${entry.id}-${index}`}
-                          className="relative"
-                        >
-                          <div
-                            className={cn(
-                              "rounded-3xl px-4 py-2 text-sm leading-6 shadow-sm",
-                              isSender
-                                ? "rounded-br-md bg-secondary text-secondary-foreground"
-                                : "rounded-bl-md bg-primary text-primary-foreground",
-                            )}
-                          >
-                            {bubble}
-                          </div>
-                          {isLastBubble && messageReaction ? (
-                            <MessageReactionBadge
-                              emoji={messageReaction}
-                              className={cn(
-                                isSender ? "-left-2" : "-right-2",
-                              )}
-                            />
-                          ) : null}
-                        </div>
-                      )
-                    })}
+                    {visibleBubbles.map((bubble, index) => (
+                      <div
+                        key={`${entry.id}-${index}`}
+                        className={cn(
+                          "rounded-3xl px-4 py-2 text-sm leading-6 shadow-sm",
+                          isSender
+                            ? "rounded-br-md bg-secondary text-secondary-foreground"
+                            : "rounded-bl-md bg-primary text-primary-foreground",
+                        )}
+                      >
+                        {bubble}
+                      </div>
+                    ))}
+                    {messageReaction ? (
+                      <MessageReactionBadge
+                        emoji={messageReaction}
+                        align={isSender ? "right" : "left"}
+                      />
+                    ) : null}
                   </div>
 
                   {!isSender ? (
