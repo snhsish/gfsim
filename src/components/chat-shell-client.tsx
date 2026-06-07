@@ -79,7 +79,7 @@ export function ChatShellClient({
                 <div className="flex flex-col justify-center">
                   <h1 className="font-medium">{girlfriend.name}</h1>
                   <p className="text-xs text-muted-foreground">
-                    Last online 12 hrs ago
+                    Online
                   </p>
                 </div>
               </div>

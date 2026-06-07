@@ -4,6 +4,7 @@ import type { UIMessage } from "ai";
 import { db } from "@/db";
 import { chatMessage } from "@/db/schema";
 import { getTextFromUIMessage } from "@/lib/ai/messages";
+import { isNoreplyMessage } from "@/lib/chat/reactions";
 import {
   CHAT_INITIAL_MESSAGE_LIMIT,
   CHAT_LOAD_OLDER_LIMIT,
@@ -142,6 +143,8 @@ export function getLastPersistableUserMessage(
 
 export function isPersistableAssistantMessage(message: UIMessage): boolean {
   if (message.role !== "assistant") return false;
-  return getTextFromUIMessage(message).trim().length > 0;
+  const text = getTextFromUIMessage(message).trim();
+  if (!text || isNoreplyMessage(text)) return false;
+  return true;
 }
 

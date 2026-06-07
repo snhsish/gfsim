@@ -1,4 +1,9 @@
-import { parseReactionTags, stripReactionTags } from "@/lib/chat/reactions";
+import {
+  isNoreplyMessage,
+  parseReactionTags,
+  stripNoreplyTags,
+  stripReactionTags,
+} from "@/lib/chat/reactions";
 
 export type ParsedGirlfriendReply =
   | { kind: "noreply" }
@@ -10,17 +15,16 @@ export type ParsedGirlfriendReply =
     };
 
 const MSG_TAG_RE = /<msg>([\s\S]*?)<\/msg>/gi;
-const NOREPLY_RE = /<noreply\s*\/?>/i;
 
 function stripControlTags(text: string): string {
   return stripReactionTags(
-    text.replace(MSG_TAG_RE, "").replace(NOREPLY_RE, ""),
+    stripNoreplyTags(text.replace(MSG_TAG_RE, "")),
   );
 }
 
 export function parseGirlfriendReply(raw: string): ParsedGirlfriendReply {
   const trimmed = raw.trim();
-  if (!trimmed || NOREPLY_RE.test(trimmed)) {
+  if (!trimmed || isNoreplyMessage(trimmed)) {
     return { kind: "noreply" };
   }
 
