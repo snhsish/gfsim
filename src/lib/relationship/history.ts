@@ -1,6 +1,7 @@
 import type { UIMessage } from "ai";
 
 import { getTextFromUIMessage } from "@/lib/ai/messages";
+import { isReactionOnlyMessage } from "@/lib/chat/reactions";
 
 /** Fast heuristic until message persistence + stored profile exist. */
 export function estimateHealthDeltaFromText(text: string): number {
@@ -58,7 +59,9 @@ export function applyConversationHealthHeuristics(
 
   messages.forEach((message, index) => {
     if (message.role !== "user" || index === skipIndex) return;
-    health += estimateHealthDeltaFromText(getTextFromUIMessage(message));
+    const text = getTextFromUIMessage(message);
+    if (isReactionOnlyMessage(text)) return;
+    health += estimateHealthDeltaFromText(text);
   });
 
   return Math.max(0, Math.min(100, health));

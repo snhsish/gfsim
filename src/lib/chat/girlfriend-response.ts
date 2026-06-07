@@ -1,21 +1,21 @@
+import { parseReactionTags, stripReactionTags } from "@/lib/chat/reactions";
+
 export type ParsedGirlfriendReply =
   | { kind: "noreply" }
   | {
       kind: "messages";
       messages: string[];
+      /** Emoji reaction shown before her bubbles (no target id). */
       reaction?: string;
     };
 
 const MSG_TAG_RE = /<msg>([\s\S]*?)<\/msg>/gi;
 const NOREPLY_RE = /<noreply\s*\/?>/i;
-const REACT_RE = /<react>([^<]*)<\/react>/i;
 
 function stripControlTags(text: string): string {
-  return text
-    .replace(MSG_TAG_RE, "")
-    .replace(REACT_RE, "")
-    .replace(NOREPLY_RE, "")
-    .trim();
+  return stripReactionTags(
+    text.replace(MSG_TAG_RE, "").replace(NOREPLY_RE, ""),
+  );
 }
 
 export function parseGirlfriendReply(raw: string): ParsedGirlfriendReply {
@@ -24,13 +24,16 @@ export function parseGirlfriendReply(raw: string): ParsedGirlfriendReply {
     return { kind: "noreply" };
   }
 
-  const reaction = trimmed.match(REACT_RE)?.[1]?.trim();
+  const reactions = parseReactionTags(trimmed);
+  const selfReaction = reactions.find(
+    (reaction) => !reaction.targetMessageId,
+  )?.emoji;
   const tagged = [...trimmed.matchAll(MSG_TAG_RE)]
     .map((match) => match[1]?.trim() ?? "")
     .filter((text) => text.length > 0);
 
   if (tagged.length > 0) {
-    return { kind: "messages", messages: tagged, reaction };
+    return { kind: "messages", messages: tagged, reaction: selfReaction };
   }
 
   const plain = stripControlTags(trimmed);
@@ -38,7 +41,7 @@ export function parseGirlfriendReply(raw: string): ParsedGirlfriendReply {
     return { kind: "noreply" };
   }
 
-  return { kind: "messages", messages: [plain], reaction };
+  return { kind: "messages", messages: [plain], reaction: selfReaction };
 }
 
 /** Human-ish pause before a bubble appears (ms). */

@@ -9,6 +9,10 @@ import { PiHandWaving } from "react-icons/pi"
 import { ChatComposer } from "@/components/chat-composer"
 import { TypingIndicator } from "@/components/typing-indicator"
 import { Item, ItemActions, ItemContent, ItemMedia, ItemTitle } from "@/components/ui/item"
+import {
+  MessageActions,
+  MessageReactionBadge,
+} from "@/components/message-actions"
 import { useGirlfriendBubbleReveal } from "@/hooks/use-girlfriend-bubble-reveal"
 import { getTextFromUIMessage } from "@/lib/ai/messages"
 import {
@@ -19,6 +23,11 @@ import type { DailyMessageUsage } from "@/lib/chat/daily-limit"
 import { isDailyMessageLimitReached } from "@/lib/chat/daily-limit"
 import { truncateUserMessage } from "@/lib/chat/message-limit"
 import { parseGirlfriendReply } from "@/lib/chat/girlfriend-response"
+import {
+  collectReactionsByMessageId,
+  formatReaction,
+  isReactionOnlyMessage,
+} from "@/lib/chat/reactions"
 import { cn } from "@/lib/utils"
 
 const chatQuestions = [
@@ -42,7 +51,7 @@ type ChatEntry =
       id: string
       role: "assistant"
       bubbles: string[]
-      reaction: string | undefined
+      selfReaction: string | undefined
     }
 
 export function ChatView({
@@ -85,12 +94,20 @@ export function ChatView({
   const isLoading = status === "submitted" || status === "streaming"
   const dailyLimitReached = isDailyMessageLimitReached(dailyMessageUsage)
 
-  const chatEntries = useMemo(() => {
+  const { chatEntries, reactionsByMessageId } = useMemo(() => {
     const last = messages.at(-1)
     const hideStreamingAssistant =
       isLoading && last?.role === "assistant"
 
-    return messages.flatMap((chatMessage): ChatEntry[] => {
+    const reactionsByMessageId = collectReactionsByMessageId(
+      messages.map((chatMessage) => ({
+        id: chatMessage.id,
+        role: chatMessage.role,
+        text: getTextFromUIMessage(chatMessage),
+      })),
+    )
+
+    const chatEntries = messages.flatMap((chatMessage): ChatEntry[] => {
       if (
         hideStreamingAssistant &&
         chatMessage.id === last?.id
@@ -102,6 +119,7 @@ export function ChatView({
       if (!text.trim()) return []
 
       if (chatMessage.role === "user") {
+        if (isReactionOnlyMessage(text)) return []
         return [{ id: chatMessage.id, role: "user" as const, bubbles: [text] }]
       }
 
@@ -116,10 +134,12 @@ export function ChatView({
           id: chatMessage.id,
           role: "assistant" as const,
           bubbles,
-          reaction: parsed.reaction,
+          selfReaction: parsed.reaction,
         },
       ]
     })
+
+    return { chatEntries, reactionsByMessageId }
   }, [messages, isLoading])
 
   const wasLoadingRef = useRef(false)
@@ -287,6 +307,20 @@ export function ChatView({
     setMessage("")
   }
 
+  async function handleReactToMessage(messageId: string, emoji: string) {
+    if (
+      dailyLimitReached ||
+      isLoading ||
+      reactionsByMessageId.has(messageId)
+    ) {
+      return
+    }
+    shouldAutoScrollRef.current = true
+    await sendMessage({
+      text: formatReaction(messageId, emoji),
+    })
+  }
+
   const limitHint = dailyLimitReached
     ? `You've used all ${dailyMessageUsage.limit} messages for today. Resets at midnight UTC.`
     : `${dailyMessageUsage.remaining} of ${dailyMessageUsage.limit} messages left today`
@@ -315,43 +349,80 @@ export function ChatView({
               const visibleBubbles = isRevealing
                 ? entry.bubbles.slice(0, reveal.visibleCount)
                 : entry.bubbles
-
+              const messageReaction = reactionsByMessageId.get(entry.id)
+              const canReactToMessage =
+                !isSender && !dailyLimitReached && !isLoading
               return (
                 <div
                   key={entry.id}
                   className={cn(
-                    "flex w-full flex-col gap-1",
-                    isSender ? "items-end" : "items-start",
+                    "group flex w-full gap-1.5",
+                    isSender ? "justify-end" : "justify-start",
                   )}
                 >
-                  {"reaction" in entry && entry.reaction ? (
-                    <span
-                      className="px-1 text-lg"
-                      aria-label={`Reacted with ${entry.reaction}`}
-                    >
-                      {entry.reaction}
-                    </span>
+                  {isSender ? (
+                    <MessageActions
+                      side="left"
+                      canReact={false}
+                      hasReaction={Boolean(messageReaction)}
+                    />
                   ) : null}
-                  {visibleBubbles.map((bubble, index) => (
-                    <div
-                      key={`${entry.id}-${index}`}
-                      className={cn(
-                        "flex w-full",
-                        isSender ? "justify-end" : "justify-start",
-                      )}
-                    >
-                      <div
-                        className={cn(
-                          "max-w-[80%] rounded-3xl px-4 py-2 text-sm leading-6 shadow-sm",
-                          isSender
-                            ? "rounded-br-md bg-secondary text-secondary-foreground"
-                            : "rounded-bl-md bg-primary text-primary-foreground",
-                        )}
+
+                  <div
+                    className={cn(
+                      "flex max-w-[80%] flex-col gap-1",
+                      isSender ? "items-end" : "items-start",
+                    )}
+                  >
+                    {!isSender && entry.selfReaction ? (
+                      <span
+                        className="px-1 text-lg"
+                        aria-label={`Reacted with ${entry.selfReaction}`}
                       >
-                        {bubble}
-                      </div>
-                    </div>
-                  ))}
+                        {entry.selfReaction}
+                      </span>
+                    ) : null}
+                    {visibleBubbles.map((bubble, index) => {
+                      const isLastBubble = index === visibleBubbles.length - 1
+
+                      return (
+                        <div
+                          key={`${entry.id}-${index}`}
+                          className="relative"
+                        >
+                          <div
+                            className={cn(
+                              "rounded-3xl px-4 py-2 text-sm leading-6 shadow-sm",
+                              isSender
+                                ? "rounded-br-md bg-secondary text-secondary-foreground"
+                                : "rounded-bl-md bg-primary text-primary-foreground",
+                            )}
+                          >
+                            {bubble}
+                          </div>
+                          {isLastBubble && messageReaction ? (
+                            <MessageReactionBadge
+                              emoji={messageReaction}
+                              className={cn(
+                                isSender ? "-left-2" : "-right-2",
+                              )}
+                            />
+                          ) : null}
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {!isSender ? (
+                    <MessageActions
+                      side="right"
+                      canReact={canReactToMessage}
+                      hasReaction={Boolean(messageReaction)}
+                      onReact={(emoji) =>
+                        void handleReactToMessage(entry.id, emoji)
+                      }
+                    />
+                  ) : null}
                 </div>
               )
             })}

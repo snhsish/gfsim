@@ -5,7 +5,7 @@ import {
   type UIMessage,
 } from "ai";
 import { getGfProfileByUserId } from "@/lib/gf-profile";
-import { getLastUserMessageText, getTextFromUIMessage } from "@/lib/ai/messages";
+import { getLastUserMessageText, getTextFromUIMessage, withMessageIdsForModel } from "@/lib/ai/messages";
 import { getChatModel, getChatProvider } from "@/lib/ai/model";
 import { buildGirlfriendSystemPrompt } from "@/lib/ai/system-prompt";
 import { CHAT_LLM_CONTEXT_LIMIT } from "@/lib/chat/constants";
@@ -19,6 +19,9 @@ import {
   isUserMessageTooLong,
   MAX_USER_MESSAGE_LENGTH,
 } from "@/lib/chat/message-limit";
+import {
+  isReactionOnlyMessage,
+} from "@/lib/chat/reactions";
 import {
   getLastPersistableUserMessage,
   isPersistableAssistantMessage,
@@ -119,13 +122,15 @@ export async function POST(req: Request) {
   let sentiment = null;
 
   if (lastUserText) {
-    sentiment = await analyzeUserMessage(lastUserText);
-    relationship = enrichProfileFromSentiment(relationship, sentiment);
-    relationship = applySentimentToProfile(
-      relationship,
-      sentiment.healthDelta,
-      sentiment.tone,
-    );
+    if (!isReactionOnlyMessage(lastUserText)) {
+      sentiment = await analyzeUserMessage(lastUserText);
+      relationship = enrichProfileFromSentiment(relationship, sentiment);
+      relationship = applySentimentToProfile(
+        relationship,
+        sentiment.healthDelta,
+        sentiment.tone,
+      );
+    }
   } else {
     relationship = {
       ...relationship,
@@ -147,7 +152,9 @@ export async function POST(req: Request) {
   const result = streamText({
     model: getChatModel(),
     system,
-    messages: await convertToModelMessages(contextMessages),
+    messages: await convertToModelMessages(
+      withMessageIdsForModel(contextMessages),
+    ),
     maxOutputTokens: 220,
     onFinish: async ({ totalUsage, response, finishReason }) => {
       const provider = getChatProvider();

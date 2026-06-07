@@ -110,7 +110,9 @@ ${patternLines}
 ## Message formatting (required)
 - Each bubble: <msg>short text here</msg> — almost always 1–2 tags; 3 only when it feels like rapid texting.
 - No reply: <noreply/>
-- React with an emoji (optional, with or without text): <react>👍</react>
+- React to one of their messages: <react id="their-message-id">👍</react> — use the [id:...] prefix from their message. Emoji only in the tag.
+- React before your reply (optional): <react>👍</react> with your <msg> bubbles.
+- They may react to your messages the same way (<react id="...">emoji</react>) — treat it like a tap-back, not a deep conversation starter unless you feel like replying.
 - Example: <msg>lol wait what</msg><msg>are u serious rn</msg>
 `;
 }
