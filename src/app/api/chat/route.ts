@@ -1,5 +1,6 @@
 import {
   convertToModelMessages,
+  createIdGenerator,
   streamText,
   type UIMessage,
 } from "ai";
@@ -148,7 +149,7 @@ export async function POST(req: Request) {
     system,
     messages: await convertToModelMessages(contextMessages),
     maxOutputTokens: 220,
-    onFinish: ({ totalUsage, response, finishReason }) => {
+    onFinish: async ({ totalUsage, response, finishReason }) => {
       const provider = getChatProvider();
       const modelId = response.modelId ?? "unknown";
       const usage = {
@@ -164,33 +165,41 @@ export async function POST(req: Request) {
         finishReason: finishReason ?? null,
       };
 
-      recordChatUsage(usage).catch((error) => {
+      try {
+        await recordChatUsage(usage);
+      } catch (error) {
         console.error("[chat] failed to record usage", error);
-      });
+      }
     },
   });
 
+  // Keep generating on the server so onFinish runs even if the client disconnects.
+  result.consumeStream();
+
   return result.toUIMessageStreamResponse({
     originalMessages: messages,
+    generateMessageId: createIdGenerator({ prefix: "msg", size: 16 }),
     messageMetadata: ({ part }) => {
       if (part.type === "start" || part.type === "finish") {
         return metadata;
       }
       return undefined;
     },
-    onFinish: ({ responseMessage, isAborted }) => {
+    onFinish: async ({ responseMessage, isAborted }) => {
       if (isAborted || !isPersistableAssistantMessage(responseMessage)) {
         return;
       }
 
-      saveChatMessage({
-        id: responseMessage.id,
-        userId: session.user.id,
-        role: "assistant",
-        content: getTextFromUIMessage(responseMessage),
-      }).catch((error) => {
+      try {
+        await saveChatMessage({
+          id: responseMessage.id,
+          userId: session.user.id,
+          role: "assistant",
+          content: getTextFromUIMessage(responseMessage),
+        });
+      } catch (error) {
         console.error("[chat] failed to save assistant message", error);
-      });
+      }
     },
   });
 }
