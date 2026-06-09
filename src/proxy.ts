@@ -19,7 +19,9 @@ export function proxy(request: NextRequest) {
   }
 
   const isProtected =
-    pathname.startsWith("/chat") || pathname.startsWith("/onboarding");
+    pathname.startsWith("/chat")
+    || pathname.startsWith("/memories")
+    || pathname.startsWith("/onboarding");
 
   if (isProtected && !hasSession) {
     const loginUrl = new URL("/login", request.url);
@@ -31,5 +33,12 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/login", "/chat/:path*", "/onboarding", "/api/auth/:path*"],
+  matcher: [
+    "/login",
+    "/chat/:path*",
+    "/memories",
+    "/memories/:path*",
+    "/onboarding",
+    "/api/auth/:path*",
+  ],
 };

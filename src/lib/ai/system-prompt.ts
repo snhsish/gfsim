@@ -14,7 +14,7 @@ function formatMemorizedDetails(details: Record<string, string>): string {
   if (entries.length === 0) {
     return "None yet — remember what they share naturally.";
   }
-  return entries.map(([key, value]) => `- ${key}: ${value}`).join("\n");
+  return entries.map(([, value]) => `- ${value}`).join("\n");
 }
 
 function healthBand(health: number): string {

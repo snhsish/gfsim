@@ -155,11 +155,34 @@ export const chatMessageRelations = relations(chatMessage, ({ one }) => ({
   }),
 }));
 
+export const memory = pgTable(
+  "memory",
+  {
+    id: text("id").primaryKey(),
+    userId: text("userId")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    content: text("content").notNull(),
+    createdAt: timestamp("createdAt").notNull(),
+  },
+  (table) => [
+    index("memory_userId_createdAt_idx").on(table.userId, table.createdAt),
+  ],
+);
+
+export const memoryRelations = relations(memory, ({ one }) => ({
+  user: one(user, {
+    fields: [memory.userId],
+    references: [user.id],
+  }),
+}));
+
 export const userRelations = relations(user, ({ one, many }) => ({
   sessions: many(session),
   accounts: many(account),
   gfProfile: one(gfProfile),
   chatMessages: many(chatMessage),
+  memories: many(memory),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({

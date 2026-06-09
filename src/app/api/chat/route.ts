@@ -36,6 +36,10 @@ import {
   resolveMoodState,
 } from "@/lib/relationship/mood";
 import { analyzeUserMessage } from "@/lib/relationship/sentiment";
+import {
+  loadMemorizedDetails,
+  saveMemoryIfNew,
+} from "@/lib/relationship/memories";
 import { enrichProfileFromSentiment } from "@/lib/relationship/update";
 
 export const maxDuration = 30;
@@ -101,6 +105,7 @@ export async function POST(req: Request) {
   const contextMessages = messages.slice(-CHAT_LLM_CONTEXT_LIMIT);
 
   let relationship = createDefaultRelationshipProfile(gfProfile.createdAt);
+  relationship.memorizedDetails = await loadMemorizedDetails(session.user.id);
   relationship.relationshipHealth = applyConversationHealthHeuristics(
     contextMessages,
     relationship.relationshipHealth,
@@ -125,6 +130,21 @@ export async function POST(req: Request) {
     if (!isReactionOnlyMessage(lastUserText)) {
       sentiment = await analyzeUserMessage(lastUserText);
       relationship = enrichProfileFromSentiment(relationship, sentiment);
+      if (sentiment.mentionedDetail) {
+        const saved = await saveMemoryIfNew(
+          session.user.id,
+          sentiment.mentionedDetail,
+        );
+        if (saved) {
+          relationship = {
+            ...relationship,
+            memorizedDetails: {
+              ...relationship.memorizedDetails,
+              [saved.id]: saved.content,
+            },
+          };
+        }
+      }
       relationship = applySentimentToProfile(
         relationship,
         sentiment.healthDelta,
