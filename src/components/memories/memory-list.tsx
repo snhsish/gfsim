@@ -66,10 +66,9 @@ export function MemoryList({ memories }: { memories: MemoryRow[] }) {
         <CardContent className="flex flex-col items-center gap-3 px-6 text-center">
           <SparklesIcon className="size-8 text-muted-foreground" />
           <div className="space-y-1">
-            <p className="font-medium">No memories yet</p>
-            <p className="text-sm text-muted-foreground">
-              Share personal details in chat — exams, birthdays, family, plans —
-              and she&apos;ll remember them here.
+            <p className="font-medium">No Memories</p>
+            <p className="text-sm text-muted-foreground max-w-md md:max-w-[500px]">
+              Every small detail you share about yourself in chat will be saved here by your girlfriend. This is a sign that she wants to remember every little thing about you.
             </p>
           </div>
         </CardContent>

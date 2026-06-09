@@ -24,7 +24,7 @@ export default async function MemoriesPage() {
             Memories
           </h1>
           <p className="text-sm text-muted-foreground">
-            Every sweet moment and personal detail you&apos;ve shared — saved so
+            Every sweet moment and personal detail you&apos;ve shared is saved so
             she can bring them up naturally in conversation.
           </p>
         </div>
