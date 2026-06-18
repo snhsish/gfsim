@@ -75,7 +75,13 @@ export function ChatView({
   const shouldAutoScrollRef = useRef(true)
   const isLoadingOlderRef = useRef(false)
   const { messages, sendMessage, setMessages, status } = useChat({
-    transport: new DefaultChatTransport({ api: "/api/chat" }),
+    transport: new DefaultChatTransport({
+      api: "/api/chat",
+      body: () => {
+        const key = typeof window !== "undefined" ? localStorage.getItem("gemini-api-key") : null;
+        return key ? { apiKey: key } : {};
+      },
+    }),
     messages: initialMessages,
     onError: (error) => {
       const message = error instanceof Error ? error.message : String(error)

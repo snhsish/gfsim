@@ -71,26 +71,28 @@ export async function POST(req: Request) {
     });
   }
 
-  const dailyUsage = await getDailyMessageUsage(session.user.id);
-  if (isDailyMessageLimitReached(dailyUsage)) {
-    return Response.json(
-      {
-        error: `Daily message limit reached (${dailyUsage.limit} per day). Try again after midnight UTC.`,
-        code: "daily_message_limit",
-        dailyUsage,
-      },
-      { status: 429 },
-    );
-  }
-
-  let body: { messages: UIMessage[] };
+  let body: { messages: UIMessage[]; apiKey?: string };
   try {
     body = await req.json();
   } catch {
     return new Response("Invalid JSON body", { status: 400 });
   }
 
-  const { messages } = body;
+  const { messages, apiKey } = body;
+
+  if (!apiKey) {
+    const dailyUsage = await getDailyMessageUsage(session.user.id);
+    if (isDailyMessageLimitReached(dailyUsage)) {
+      return Response.json(
+        {
+          error: `Daily message limit reached (${dailyUsage.limit} per day). Try again after midnight UTC.`,
+          code: "daily_message_limit",
+          dailyUsage,
+        },
+        { status: 429 },
+      );
+    }
+  }
   if (!Array.isArray(messages)) {
     return new Response("messages must be an array", { status: 400 });
   }
@@ -170,7 +172,7 @@ export async function POST(req: Request) {
   });
 
   const result = streamText({
-    model: getChatModel(),
+    model: getChatModel(apiKey),
     system,
     messages: await convertToModelMessages(
       withMessageIdsForModel(contextMessages),

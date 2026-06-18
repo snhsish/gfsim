@@ -77,7 +77,7 @@ const accountNav = [
 
 function isNavItemActive(pathname: string, url: string) {
   if (url === "#") return false
-  if (url === "/chat") return pathname === "/chat"
+  if (url === "/chat" || url === "/account") return pathname === url
   return pathname === url || pathname.startsWith(`${url}/`)
 }
 

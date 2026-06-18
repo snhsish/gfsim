@@ -128,7 +128,16 @@ function createTogetherChatModel(modelId: string): LanguageModel {
   });
 }
 
-export function getChatModel(): LanguageModel {
+export function createUserGeminiModel(apiKey: string): LanguageModel {
+  const google = createGoogleGenerativeAI({ apiKey });
+  return google(toGoogleModelId(DEFAULT_GOOGLE_MODEL));
+}
+
+export function getChatModel(userApiKey?: string): LanguageModel {
+  if (userApiKey) {
+    return createUserGeminiModel(userApiKey);
+  }
+
   const provider = getChatProvider();
   const modelId = getChatModelId();
 
