@@ -29,8 +29,8 @@ import {
   saveUIMessage,
 } from "@/lib/chat/persistence";
 import { getServerSession } from "@/lib/auth-session";
-import { createDefaultRelationshipProfile } from "@/lib/relationship/defaults";
-import { applyConversationHealthHeuristics } from "@/lib/relationship/history";
+import { getOrCreateProfile, saveProfile } from "@/lib/relationship/profile-db";
+import { getInactivityHours, applyInactivityDecay } from "@/lib/relationship/inactivity";
 import {
   applySentimentToProfile,
   resolveMoodState,
@@ -41,11 +41,18 @@ import {
   saveMemoryIfNew,
 } from "@/lib/relationship/memories";
 import { enrichProfileFromSentiment } from "@/lib/relationship/update";
+import type { MoodState, RelationshipStatus } from "@/lib/relationship/types";
 
 export const maxDuration = 30;
 
 function buildChatMetadata(
-  relationship: ReturnType<typeof createDefaultRelationshipProfile>,
+  relationship: {
+    relationshipHealth: number;
+    moodState: MoodState;
+    relationshipStatus: RelationshipStatus;
+    cycleDay: number;
+    cycleActive: boolean;
+  },
 ): GirlfriendChatMetadata {
   return {
     relationshipHealth: relationship.relationshipHealth,
@@ -104,15 +111,22 @@ export async function POST(req: Request) {
     });
   }
 
+  const now = new Date();
   const contextMessages = messages.slice(-CHAT_LLM_CONTEXT_LIMIT);
 
-  let relationship = createDefaultRelationshipProfile(gfProfile.createdAt);
-  relationship.memorizedDetails = await loadMemorizedDetails(session.user.id);
-  relationship.relationshipHealth = applyConversationHealthHeuristics(
-    contextMessages,
-    relationship.relationshipHealth,
-    { skipLastUserMessage: true },
+  const persisted = await getOrCreateProfile(
+    session.user.id,
+    gfProfile.createdAt,
   );
+  let relationship: typeof persisted = { ...persisted };
+  relationship.memorizedDetails = await loadMemorizedDetails(session.user.id);
+
+  const gapHours = getInactivityHours(relationship.lastActiveAt, now);
+  if (gapHours > 6) {
+    const decayed = applyInactivityDecay(relationship, gapHours);
+    relationship.relationshipHealth = decayed.relationshipHealth;
+    relationship.moodState = decayed.moodState;
+  }
 
   const lastUserText = getLastUserMessageText(contextMessages);
   if (lastUserText && isUserMessageTooLong(lastUserText)) {
@@ -131,7 +145,8 @@ export async function POST(req: Request) {
   if (lastUserText) {
     if (!isReactionOnlyMessage(lastUserText)) {
       sentiment = await analyzeUserMessage(lastUserText);
-      relationship = enrichProfileFromSentiment(relationship, sentiment);
+      const enriched = enrichProfileFromSentiment(relationship, sentiment);
+      relationship = { ...relationship, ...enriched, memorizedDetails: relationship.memorizedDetails };
       if (sentiment.mentionedDetail) {
         const saved = await saveMemoryIfNew(
           session.user.id,
@@ -147,11 +162,12 @@ export async function POST(req: Request) {
           };
         }
       }
-      relationship = applySentimentToProfile(
+      const updated = applySentimentToProfile(
         relationship,
         sentiment.healthDelta,
         sentiment.tone,
       );
+      relationship = { ...relationship, ...updated };
     }
   } else {
     relationship = {
@@ -169,7 +185,11 @@ export async function POST(req: Request) {
     mood,
     userName: session.user.name,
     sentiment,
+    gapHours,
   });
+
+  relationship.lastActiveAt = now;
+  await saveProfile(session.user.id, relationship);
 
   const result = streamText({
     model: getChatModel(apiKey),
@@ -179,7 +199,7 @@ export async function POST(req: Request) {
     ),
     maxOutputTokens: 220,
     onFinish: async ({ totalUsage, response, finishReason }) => {
-      const provider = getChatProvider();
+      const provider = apiKey ? "google" : getChatProvider();
       const modelId = response.modelId ?? "unknown";
       const usage = {
         userId: session.user.id,

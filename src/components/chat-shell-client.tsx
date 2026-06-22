@@ -15,6 +15,12 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { Avatar, AvatarBadge, AvatarFallback, AvatarImage } from "./ui/avatar"
+import { MoodProvider, useMood } from "@/lib/chat/mood-context"
+import {
+  MOOD_AVATAR_BADGE,
+  MOOD_HEADER_STATUS,
+} from "@/lib/relationship/mood-styles"
+import { cn } from "@/lib/utils"
 
 export type GirlfriendHeaderInfo = {
   name: string
@@ -30,18 +36,20 @@ function getInitials(name: string) {
     .toUpperCase()
 }
 
-export function ChatShellClient({
+function ChatShellInner({
   children,
-  breadcrumb = "Chat",
+  breadcrumb,
   user,
-  girlfriend = null,
+  girlfriend,
+  girlfriendInitials,
 }: {
   children: React.ReactNode
-  breadcrumb?: string
+  breadcrumb: string
   user: NavUserInfo
-  girlfriend?: GirlfriendHeaderInfo | null
+  girlfriend: GirlfriendHeaderInfo | null
+  girlfriendInitials: string
 }) {
-  const girlfriendInitials = girlfriend ? getInitials(girlfriend.name) : ""
+  const { moodState } = useMood()
 
   return (
     <SidebarProvider className="h-svh min-h-0 overflow-hidden">
@@ -73,13 +81,13 @@ export function ChatShellClient({
                     />
                   ) : null}
                   <AvatarFallback>{girlfriendInitials}</AvatarFallback>
-                  <AvatarBadge className="bg-green-600 dark:bg-green-400" />
+                  <AvatarBadge className={cn(MOOD_AVATAR_BADGE[moodState])} />
                 </Avatar>
 
                 <div className="flex flex-col justify-center">
                   <h1 className="font-medium">{girlfriend.name}</h1>
                   <p className="text-xs text-muted-foreground">
-                    Online
+                    {MOOD_HEADER_STATUS[moodState]}
                   </p>
                 </div>
               </div>
@@ -89,5 +97,32 @@ export function ChatShellClient({
         {children}
       </SidebarInset>
     </SidebarProvider>
+  )
+}
+
+export function ChatShellClient({
+  children,
+  breadcrumb = "Chat",
+  user,
+  girlfriend = null,
+}: {
+  children: React.ReactNode
+  breadcrumb?: string
+  user: NavUserInfo
+  girlfriend?: GirlfriendHeaderInfo | null
+}) {
+  const girlfriendInitials = girlfriend ? getInitials(girlfriend.name) : ""
+
+  return (
+    <MoodProvider>
+      <ChatShellInner
+        breadcrumb={breadcrumb}
+        user={user}
+        girlfriend={girlfriend}
+        girlfriendInitials={girlfriendInitials}
+      >
+        {children}
+      </ChatShellInner>
+    </MoodProvider>
   )
 }

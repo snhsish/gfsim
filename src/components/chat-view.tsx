@@ -29,6 +29,12 @@ import {
   isReactionOnlyMessage,
 } from "@/lib/chat/reactions"
 import { cn } from "@/lib/utils"
+import { useMood, useMoodSetter } from "@/lib/chat/mood-context"
+import type { MoodState } from "@/lib/relationship/types"
+import {
+  MOOD_BUBBLE_CLASSES,
+  MOOD_TYPING_CLASSES,
+} from "@/lib/relationship/mood-styles"
 
 const chatQuestions = [
   {
@@ -99,6 +105,22 @@ export function ChatView({
   })
   const isLoading = status === "submitted" || status === "streaming"
   const dailyLimitReached = isDailyMessageLimitReached(dailyMessageUsage)
+
+  const { setMoodState, setRelationshipHealth } = useMoodSetter();
+  const { moodState: currentMood } = useMood();
+
+  useEffect(() => {
+    const lastAssistant = [...messages].reverse().find(
+      (m) => m.role === "assistant" && m.metadata,
+    );
+    if (!lastAssistant?.metadata) return;
+    const meta = lastAssistant.metadata as {
+      moodState: MoodState;
+      relationshipHealth: number;
+    };
+    if (meta.moodState) setMoodState(meta.moodState);
+    if (meta.relationshipHealth !== undefined) setRelationshipHealth(meta.relationshipHealth);
+  }, [messages, setMoodState, setRelationshipHealth]);
 
   const { chatEntries, reactionsByMessageId } = useMemo(() => {
     const last = messages.at(-1)
@@ -396,7 +418,7 @@ export function ChatView({
                           "rounded-3xl px-4 py-2 text-sm leading-6 shadow-sm",
                           isSender
                             ? "rounded-br-md bg-secondary text-secondary-foreground"
-                            : "rounded-bl-md bg-primary text-primary-foreground",
+                            : `rounded-bl-md ${MOOD_BUBBLE_CLASSES[currentMood]}`,
                         )}
                       >
                         {bubble}
@@ -425,7 +447,10 @@ export function ChatView({
             })}
             {showTypingIndicator && (
               <div className="flex w-full justify-start">
-                <div className="rounded-3xl rounded-bl-md bg-primary px-4 py-3 text-primary-foreground">
+                <div className={cn(
+                  "rounded-3xl rounded-bl-md px-4 py-3 text-primary-foreground",
+                  MOOD_TYPING_CLASSES[currentMood],
+                )}>
                   <TypingIndicator />
                 </div>
               </div>

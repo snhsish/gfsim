@@ -181,6 +181,7 @@ export const userRelations = relations(user, ({ one, many }) => ({
   sessions: many(session),
   accounts: many(account),
   gfProfile: one(gfProfile),
+  relationshipProfile: one(relationshipProfile),
   chatMessages: many(chatMessage),
   memories: many(memory),
 }));
@@ -205,3 +206,34 @@ export const gfProfileRelations = relations(gfProfile, ({ one }) => ({
     references: [user.id],
   }),
 }));
+
+export const relationshipProfile = pgTable(
+  "relationship_profile",
+  {
+    id: text("id").primaryKey(),
+    userId: text("userId")
+      .notNull()
+      .unique()
+      .references(() => user.id, { onDelete: "cascade" }),
+    relationshipHealth: integer("relationshipHealth").notNull().default(70),
+    relationshipStatus: text("relationshipStatus").notNull().default("active"),
+    lastActiveAt: timestamp("lastActiveAt").notNull(),
+    patternNotes: text("patternNotes").array().notNull().default([]),
+    lastConflictSummary: text("lastConflictSummary"),
+    createdAt: timestamp("createdAt").notNull(),
+    updatedAt: timestamp("updatedAt").notNull(),
+  },
+  (table) => [
+    index("relationship_profile_userId_idx").on(table.userId),
+  ],
+);
+
+export const relationshipProfileRelations = relations(
+  relationshipProfile,
+  ({ one }) => ({
+    user: one(user, {
+      fields: [relationshipProfile.userId],
+      references: [user.id],
+    }),
+  }),
+);

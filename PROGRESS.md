@@ -32,19 +32,19 @@ For product behavior and design intent, see [AGENT.md](./AGENT.md) and [PLAN.md]
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Relationship health score (0–100) | 🟡 Partial | Computed per request; not persisted to DB |
+| Relationship health score (0–100) | ✅ Done | Persisted to `relationship_profile` table, loaded/saved each request |
 | Sentiment analysis (LLM) | ✅ Done | `src/lib/relationship/sentiment.ts` — tone, health delta, jealousy, details |
-| Regex health heuristics | ✅ Done | `history.ts` — scans in-context user messages |
+| Regex health heuristics | 🟡 Deprecated | Superseded by persisted health; `history.ts` still exists but unused |
 | Mood state resolution | ✅ Done | `mood.ts` — 7 states from health + cycle + status |
 | Monthly cycle (days 22–28) | ✅ Done | Based on `gf_profile.createdAt`; affects mood + prompt |
-| Dynamic system prompt | ✅ Done | `src/lib/ai/system-prompt.ts` — health, mood, memories, patterns |
-| Pattern notes (jealousy etc.) | 🟡 Partial | Ephemeral `patternNotes` array, last 5 entries; not persisted |
+| Dynamic system prompt | ✅ Done | `src/lib/ai/system-prompt.ts` — health, mood, memories, patterns + gap hours |
+| Pattern notes (jealousy etc.) | ✅ Done | Persisted in `patternNotes` array on `relationship_profile` table |
 | Response tone mirroring | ✅ Done | Via mood guidance in system prompt |
 | Relationship metadata in stream | ✅ Done | Health, mood, cycle sent as message metadata |
-| Persisted relationship profile | ❌ Not started | No DB table; profile rebuilt each request from defaults |
-| Inactivity / abandonment tracking | ❌ Not started | No `lastActiveAt`, no gap-based health penalties |
-| Unprompted check-in messages | ❌ Not started | No cron; 6h/12h/24h triggers from AGENT.md |
-| Mood-aware UI styling | ❌ Not started | Metadata exists but chat UI doesn't reflect mood |
+| Persisted relationship profile | ✅ Done | `relationship_profile` table; `getOrCreateProfile`/`saveProfile` in `profile-db.ts` |
+| Inactivity / abandonment tracking | ✅ Done | Gap-based health decay (-1 at 6h, -3 at 12h, -5 at 24h+); `lastActiveAt` tracked |
+| Unprompted check-in messages | ✅ Done | `GET /api/cron/inactivity` — 6h/12h/24h templates; requires CRON_SECRET + external cron |
+| Mood-aware UI styling | ✅ Done | Bubble colors, typing indicator, avatar badge, header status — all mood-reactive |
 
 ---
 
@@ -71,7 +71,7 @@ For product behavior and design intent, see [AGENT.md](./AGENT.md) and [PLAN.md]
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Socket.IO / WebSockets | ❌ Not started | Mentioned in AGENT.md; chat is HTTP streaming only |
-| Cron / background jobs | ❌ Not started | No inactivity checks, cycle notifications, or health decay |
+| Cron / background jobs | ✅ Done | Inactivity check-in endpoint at `GET /api/cron/inactivity` |
 | Relationship health in UI | ❌ Not started | Score not shown to user (by design for now) |
 | Export relationship history | ❌ Not started | — |
 | Reset relationship | ❌ Not started | — |
@@ -119,11 +119,10 @@ Override model with `AI_CHAT_MODEL`.
 
 ## Known gaps & tech debt
 
-1. **Relationship state is ephemeral** — health resets to ~70 + in-context heuristics each request; long-term relationship arc cannot work until profile is persisted.
-2. **Health double-counting risk** — latest message analyzed by LLM sentiment AND prior messages scanned by regex heuristics; `skipLastUserMessage` mitigates but architecture is interim.
-3. **`AGENT.md` "Not in scope" section is outdated** — chat UI and relationship engine are built; Socket.IO and cron are still not.
-4. **Breakup system is prompt-only** — mood `broken` and `<noreply/>` exist but no state machine drives breakup/recovery.
-5. **No tests** — no test suite in repo yet.
+1. **Breakup system is prompt-only** — mood `broken` and `<noreply/>` exist but no state machine drives breakup/recovery.
+2. **`AGENT.md` "Not in scope" section is outdated** — chat UI and relationship engine are built; Socket.IO is still not.
+3. **No tests** — no test suite in repo yet.
+4. **Health double-counting risk (legacy)** — `history.ts` heuristics still exist but are no longer called. Remove in a future cleanup pass.
 
 ---
 
@@ -131,11 +130,10 @@ Override model with `AI_CHAT_MODEL`.
 
 Priority order for meaningful progress toward the full vision:
 
-1. **Persist relationship profile** — new `relationship_profile` table; load/save on each chat request.
-2. **Inactivity tracking** — `lastActiveAt` + gap-based health penalties + unprompted messages (cron or edge function).
-3. **Breakup state machine** — transition `relationshipStatus`, lock UI, cooldown, reconciliation flow.
-4. **Mood-aware UI** — subtle styling from streamed metadata.
-5. **Update AGENT.md** — align "Tech stack" and scope sections with reality.
+1. **Breakup state machine** — transition `relationshipStatus` to `broken_up`, lock UI with desaturated styling, cooldown period, reconciliation flow.
+2. **Conflict tracking** — populate `lastConflictSummary` from sentiment analysis when tone is rude/dismissive.
+3. **Photo upload** — wire up the existing file picker to actually send photos in the chat API request.
+4. **Update AGENT.md** — align "Tech stack" and scope sections with reality.
 
 ---
 

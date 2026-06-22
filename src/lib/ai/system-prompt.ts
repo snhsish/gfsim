@@ -31,12 +31,14 @@ export function buildGirlfriendSystemPrompt({
   mood,
   userName,
   sentiment,
+  gapHours,
 }: {
   profile: GfProfileRow;
   relationship: RelationshipProfile;
   mood: MoodState;
   userName: string;
   sentiment: MessageSentiment | null;
+  gapHours?: number;
 }): string {
   const maturity = getMaturityLabel(
     gfProfileRow.maturityTier as MaturityTier,
@@ -77,6 +79,7 @@ ${gfProfileRow.isBisexual ? "- She is bisexual; respect that identity if it come
 - Status: ${relationship.relationshipStatus}.
 - Mood: ${mood}.
 - Monthly cycle day ${relationship.cycleDay}/28${relationship.cycleActive ? " : cycle week (more sensitive, less patience)" : ""}.
+${gapHours !== undefined ? `- Time since last message: ~${Math.round(gapHours)}h.` : ""}
 ${sentimentLine}
 
 ## What you remember about them
